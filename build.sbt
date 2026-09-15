@@ -1171,6 +1171,10 @@ lazy val bench = project
       "tools.profiler" % "async-profiler" % "4.2",
       "tools.profiler" % "jfr-converter" % "4.2",
     ),
+    // Shared with `benchSourcepathScala3` (SourcepathCorpus.scala) so both sides
+    // of the sourcepath-scan comparison parse byte-for-byte identical input.
+    Compile / unmanagedSourceDirectories +=
+      (ThisBuild / baseDirectory).value / "metals-bench-shared",
     Jmh / bspEnabled := false,
     Jmh / fork := true,
     Jmh / javaOptions ++= sharedJavaOptions,
@@ -1178,6 +1182,33 @@ lazy val bench = project
       s"-Dmetals.jfr.dir=${(ThisBuild / baseDirectory).value / "target"}",
   )
   .dependsOn(unit)
+  .enablePlugins(JmhPlugin)
+
+// Scala 3 side of the sourcepath-scan comparison started in `bench`
+// (see Scala2SourcepathBench there). Lives in its own project, built with a
+// locally publishLocal'd scala3 checkout as its own Scala version, because
+// depending on a Scala 3.8+ artifact from the (Scala 2.13) `bench` project
+// isn't supported by sbt: https://github.com/sbt/sbt/discussions/8728
+lazy val benchSourcepathScala3 = project
+  .in(file("metals-bench-scala3"))
+  .settings(
+    sharedSettings,
+    scalaVersion := "3.10.1-RC1-bin-SNAPSHOT",
+    run / fork := true,
+    publish / skip := true,
+    moduleName := "metals-bench-scala3",
+    libraryDependencies += "org.scala-lang" % "scala3-compiler_3" % scalaVersion.value,
+    libraryDependencies ++= List(
+      "tools.profiler" % "async-profiler" % "4.2",
+      "tools.profiler" % "jfr-converter" % "4.2",
+    ),
+    // Shared with `bench` (SourcepathCorpus.scala), see the comment there.
+    Compile / unmanagedSourceDirectories +=
+      (ThisBuild / baseDirectory).value / "metals-bench-shared",
+    Jmh / bspEnabled := false,
+    Jmh / fork := true,
+    Jmh / javaOptions ++= sharedJavaOptions,
+  )
   .enablePlugins(JmhPlugin)
 
 lazy val docs = project

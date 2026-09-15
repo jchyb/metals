@@ -71,6 +71,7 @@ abstract class PcBenchmark {
   def newPC(
       version: String,
       search: SymbolSearch = newSearch(),
+      sourcePathDirs: List[Path] = Nil,
   ): PresentationCompiler = {
     val pc = MtagsResolver.default().resolve(version) match {
       case Some(MtagsBinaries.BuildIn) => new ScalaPresentationCompiler()
@@ -82,8 +83,17 @@ abstract class PcBenchmark {
         )
 
     }
+    // The 4-arg overload's `sourcePath` supplier is the real mechanism Metals
+    // uses to wire up fallback/MBT sourcepath support (see
+    // CompilerConfiguration.fromMtags in the metals module) -- sourcepath
+    // dirs are never passed as a "-sourcepath" scalac option string.
     pc.withSearch(search)
-      .newInstance("", classpath.asJava, Nil.asJava, () => Nil.asJava)
+      .newInstance(
+        "",
+        classpath.asJava,
+        Nil.asJava,
+        () => sourcePathDirs.asJava,
+      )
   }
 
   @Setup
